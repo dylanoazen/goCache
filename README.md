@@ -36,5 +36,6 @@ This project was created to learn backend and systems engineering concepts using
 ## Running
 
 ```bash
-go run .
+go run ./cmd/server
+go run ./cmd/client
 ```
