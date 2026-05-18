@@ -15,8 +15,6 @@ func (e *Execution) Connect() {
 		fmt.Println("Error connecting:", err)
 		return
 	}
-	defer coon.Close()
-
 	e.conn = coon
 
 }
@@ -25,5 +23,11 @@ func (e *Execution) SendMessage(message string) {
 	_, err := fmt.Fprintf(e.conn, message)
 	if err != nil {
 		fmt.Println("Error sending message:", err)
+	}
+}
+
+func (e *Execution) Close() {
+	if e.conn != nil {
+		e.conn.Close()
 	}
 }
