@@ -20,7 +20,7 @@ func (e *Execution) Connect() {
 }
 
 func (e *Execution) SendMessage(message string) {
-	_, err := fmt.Fprintf(e.conn, message)
+	_, err := fmt.Fprintf(e.conn, message+"\n")
 	if err != nil {
 		fmt.Println("Error sending message:", err)
 	}
