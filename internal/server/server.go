@@ -7,6 +7,9 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strconv"
+	"strings"
+	"io"
 )
 
 type Server struct {
@@ -48,7 +51,15 @@ func (s *Server) Start() {
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	message, err := bufio.NewReader(conn).ReadString('\n')
+	
+	reader := bufio.NewReader(conn)
+	sizeStr, err := reader.ReadString(':')
+	sizeStr = strings.TrimSuffix(sizeStr, ":")
+	size, err := strconv.Atoi(sizeStr)
+	buf := make([]byte, size)
+	_, err = io.ReadFull(reader, buf)
+	message := string(buf)
+
 
 	if err != nil {
 		fmt.Println("Read error:", err)

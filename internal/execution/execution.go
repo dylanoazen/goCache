@@ -20,7 +20,13 @@ func (e *Execution) Connect() {
 }
 
 func (e *Execution) SendMessage(message string) {
-	_, err := fmt.Fprintf(e.conn, message+"\n")
+	messageLength := len(message)
+	if messageLength == 0 {
+		fmt.Println("Cannot send empty message")
+		return
+	}
+
+	_, err := fmt.Fprintf(e.conn, "%d:%s", messageLength, message)
 	if err != nil {
 		fmt.Println("Error sending message:", err)
 	}
