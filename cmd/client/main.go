@@ -8,5 +8,6 @@ func main() {
 	exec := &execution.Execution{}
 	exec.Connect()
 	exec.SendMessage("hello from client")
-	exec.Close()
+	exec.ReceiveMessage()
+	defer exec.Close()
 }

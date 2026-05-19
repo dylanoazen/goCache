@@ -38,7 +38,7 @@ func (s *Server) Start() {
 			fmt.Println("Accept error:", err)
 			continue
 		}
-
+		s.sendConnectionConfirm(conn)
 		s.mu.Lock()
 		s.lastActivity = time.Now()
 		s.mu.Unlock()
@@ -48,8 +48,8 @@ func (s *Server) Start() {
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
-
 	message, err := bufio.NewReader(conn).ReadString('\n')
+
 	if err != nil {
 		fmt.Println("Read error:", err)
 		return
@@ -63,14 +63,21 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 func (s *Server) shutDownIfIdle(ln net.Listener) {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Minute)
 		s.mu.Lock()
 		idleFor := time.Since(s.lastActivity)
 		s.mu.Unlock()
-		if idleFor > 5*time.Second {
-			fmt.Println("No activity for 5 Seconds, shutting down server.")
+		if idleFor > 10*time.Minute {
+			fmt.Println("No activity for 10 Minutes, shutting down server.")
 			_ = ln.Close()
 			return
 		}
+	}
+}
+
+func (s *Server) sendConnectionConfirm(conn net.Conn) {
+	_, err := conn.Write([]byte("Connection confirmed\n"))
+	if err != nil {
+		fmt.Println("Write error:", err)
 	}
 }

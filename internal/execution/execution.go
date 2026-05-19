@@ -31,3 +31,13 @@ func (e *Execution) Close() {
 		e.conn.Close()
 	}
 }
+
+func (e *Execution) ReceiveMessage() {
+	buf := make([]byte, 1024)
+	n, err := e.conn.Read(buf)
+	if err != nil {
+		fmt.Println("Error receiving message:", err)
+		return
+	}
+	fmt.Println("Received from server:", string(buf[:n]))
+}
