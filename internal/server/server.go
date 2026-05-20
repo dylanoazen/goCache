@@ -51,20 +51,29 @@ func (s *Server) Start() {
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	
+
 	reader := bufio.NewReader(conn)
 	sizeStr, err := reader.ReadString(':')
-	sizeStr = strings.TrimSuffix(sizeStr, ":")
-	size, err := strconv.Atoi(sizeStr)
-	buf := make([]byte, size)
-	_, err = io.ReadFull(reader, buf)
-	message := string(buf)
-
-
 	if err != nil {
 		fmt.Println("Read error:", err)
 		return
 	}
+
+	sizeStr = strings.TrimSuffix(sizeStr, ":")
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		fmt.Println("Read error:", err)
+		return
+	}
+
+	buf := make([]byte, size)
+	_, err = io.ReadFull(reader, buf)
+	if err != nil {
+		fmt.Println("Read error:", err)
+		return
+	}
+
+	message := string(buf)
 
 	fmt.Println("received:", message)
 	s.mu.Lock()

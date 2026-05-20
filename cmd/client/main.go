@@ -7,7 +7,7 @@ import (
 func main() {
 	exec := &execution.Execution{}
 	exec.Connect()
+	defer exec.Close()
 	exec.SendMessage("hello from client")
 	exec.ReceiveMessage()
-	defer exec.Close()
 }

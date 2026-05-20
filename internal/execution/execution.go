@@ -16,10 +16,14 @@ func (e *Execution) Connect() {
 		return
 	}
 	e.conn = coon
-
 }
 
 func (e *Execution) SendMessage(message string) {
+	if e.conn == nil {
+		fmt.Println("No connection available")
+		return
+	}
+
 	messageLength := len(message)
 	if messageLength == 0 {
 		fmt.Println("Cannot send empty message")
@@ -39,6 +43,11 @@ func (e *Execution) Close() {
 }
 
 func (e *Execution) ReceiveMessage() {
+	if e.conn == nil {
+		fmt.Println("No connection available")
+		return
+	}
+
 	buf := make([]byte, 1024)
 	n, err := e.conn.Read(buf)
 	if err != nil {
