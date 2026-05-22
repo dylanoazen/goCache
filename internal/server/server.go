@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"hash/crc32"
+	"io"
 	"net"
-	"sync"
-	"time"
 	"strconv"
 	"strings"
-	"io"
+	"sync"
+	"time"
 )
 
 type Server struct {
@@ -73,6 +74,35 @@ func (s *Server) handleConnection(conn net.Conn) {
 		return
 	}
 
+	delim, err := reader.ReadByte()
+	if err != nil {
+		fmt.Println("Read error:", err)
+		return
+	}
+	if delim != ':' {
+		fmt.Println("Read error: invalid checksum delimiter")
+		return
+	}
+
+	checksumStr, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Read error:", err)
+		return
+	}
+
+	checksumStr = strings.TrimSuffix(checksumStr, "\n")
+	checksumValue, err := strconv.ParseUint(checksumStr, 10, 32)
+	if err != nil {
+		fmt.Println("Read error:", err)
+		return
+	}
+
+	expected := crc32.ChecksumIEEE(buf)
+	if uint32(checksumValue) != expected {
+		fmt.Println("Read error: checksum mismatch")
+		return
+	}
+
 	message := string(buf)
 
 	fmt.Println("received:", message)
@@ -96,7 +126,9 @@ func (s *Server) shutDownIfIdle(ln net.Listener) {
 }
 
 func (s *Server) sendConnectionConfirm(conn net.Conn) {
-	_, err := conn.Write([]byte("Connection confirmed\n"))
+	message := "Connection confirmed"
+	checksum := crc32.ChecksumIEEE([]byte(message))
+	_, err := fmt.Fprintf(conn, "%d:%s:%d\n", len(message), message, checksum)
 	if err != nil {
 		fmt.Println("Write error:", err)
 	}

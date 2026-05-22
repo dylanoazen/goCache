@@ -1,8 +1,13 @@
 package execution
 
 import (
+	"bufio"
 	"fmt"
+	"hash/crc32"
+	"io"
 	"net"
+	"strconv"
+	"strings"
 )
 
 type Execution struct {
@@ -30,7 +35,8 @@ func (e *Execution) SendMessage(message string) {
 		return
 	}
 
-	_, err := fmt.Fprintf(e.conn, "%d:%s", messageLength, message)
+	checksum := crc32.ChecksumIEEE([]byte(message))
+	_, err := fmt.Fprintf(e.conn, "%d:%s:%d\n", messageLength, message, checksum)
 	if err != nil {
 		fmt.Println("Error sending message:", err)
 	}
@@ -48,11 +54,55 @@ func (e *Execution) ReceiveMessage() {
 		return
 	}
 
-	buf := make([]byte, 1024)
-	n, err := e.conn.Read(buf)
+	reader := bufio.NewReader(e.conn)
+	sizeStr, err := reader.ReadString(':')
 	if err != nil {
 		fmt.Println("Error receiving message:", err)
 		return
 	}
-	fmt.Println("Received from server:", string(buf[:n]))
+
+	sizeStr = strings.TrimSuffix(sizeStr, ":")
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		fmt.Println("Error receiving message:", err)
+		return
+	}
+
+	buf := make([]byte, size)
+	_, err = io.ReadFull(reader, buf)
+	if err != nil {
+		fmt.Println("Error receiving message:", err)
+		return
+	}
+
+	delim, err := reader.ReadByte()
+	if err != nil {
+		fmt.Println("Error receiving message:", err)
+		return
+	}
+	if delim != ':' {
+		fmt.Println("Error receiving message: invalid checksum delimiter")
+		return
+	}
+
+	checksumStr, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error receiving message:", err)
+		return
+	}
+
+	checksumStr = strings.TrimSuffix(checksumStr, "\n")
+	checksumValue, err := strconv.ParseUint(checksumStr, 10, 32)
+	if err != nil {
+		fmt.Println("Error receiving message:", err)
+		return
+	}
+
+	expected := crc32.ChecksumIEEE(buf)
+	if uint32(checksumValue) != expected {
+		fmt.Println("Error receiving message: checksum mismatch")
+		return
+	}
+
+	fmt.Println("Received from server:", string(buf))
 }
