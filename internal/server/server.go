@@ -2,14 +2,15 @@ package server
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
-	"sync"
-	"time"
 	"strconv"
 	"strings"
-	"io"
+	"sync"
+	"time"
 )
 
 type Server struct {
@@ -41,7 +42,6 @@ func (s *Server) Start() {
 			fmt.Println("Accept error:", err)
 			continue
 		}
-		s.sendConnectionConfirm(conn)
 		s.mu.Lock()
 		s.lastActivity = time.Now()
 		s.mu.Unlock()
@@ -51,15 +51,23 @@ func (s *Server) Start() {
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	
+
 	reader := bufio.NewReader(conn)
 	sizeStr, err := reader.ReadString(':')
+	if err != nil {
+		fmt.Println("Read error:", err)
+		return
+	}
+	recvTime := time.Now()
 	sizeStr = strings.TrimSuffix(sizeStr, ":")
 	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		fmt.Println("Parse size error:", err)
+		return
+	}
 	buf := make([]byte, size)
 	_, err = io.ReadFull(reader, buf)
 	message := string(buf)
-
 
 	if err != nil {
 		fmt.Println("Read error:", err)
@@ -70,6 +78,11 @@ func (s *Server) handleConnection(conn net.Conn) {
 	s.mu.Lock()
 	s.lastActivity = time.Now()
 	s.mu.Unlock()
+
+	if strings.EqualFold(message, "PING") {
+		elapsed := time.Since(recvTime)
+		s.sendPong(conn, elapsed)
+	}
 }
 
 func (s *Server) shutDownIfIdle(ln net.Listener) {
@@ -86,8 +99,11 @@ func (s *Server) shutDownIfIdle(ln net.Listener) {
 	}
 }
 
-func (s *Server) sendConnectionConfirm(conn net.Conn) {
-	_, err := conn.Write([]byte("Connection confirmed\n"))
+func (s *Server) sendPong(conn net.Conn, elapsed time.Duration) {
+	resp := make([]byte, 9)
+	resp[0] = 1
+	binary.BigEndian.PutUint64(resp[1:], uint64(elapsed.Nanoseconds()))
+	_, err := conn.Write(resp)
 	if err != nil {
 		fmt.Println("Write error:", err)
 	}
