@@ -41,16 +41,16 @@ func (e *Execution) Close() {
 	}
 }
 
-func (e *Execution) ReceiveMessage() {
+func (e *Execution) ReceiveMessage() (time.Duration, error) {
 	resp := make([]byte, 9)
 	_, err := io.ReadFull(e.conn, resp)
 	if err != nil {
-		fmt.Println("Error receiving response:", err)
-		return
+		return 0, err
 	}
 
 	flag := resp[0]
 	procNs := int64(binary.BigEndian.Uint64(resp[1:]))
 	procTime := time.Duration(procNs)
 	fmt.Printf("Received pong: flag=%d, procTime=%s\n", flag, procTime)
+	return procTime, nil
 }
